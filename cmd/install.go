@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
 	"github.com/spf13/cobra"
 	"io"
@@ -18,39 +20,69 @@ Habla já vem com um conjunto pronto, mas não é garantido que esteja atualizad
 	Run: func(cmd *cobra.Command, args []string) {
 		url := "https://www.ime.usp.br/~pf/dicios/br-utf8.txt"
 		fileName := "base-words.txt"
+		fiveLetters := "five-letters-words.txt"
 
-		resp, err := http.Get(url)
+		downloadFile(url, fileName)
 
-		if err != nil {
-			fmt.Println("Não foi possível baixar o repositório de palavras")
-			return
-		}
-
-		defer resp.Body.Close()
-
-		if resp.StatusCode != 200 {
-			fmt.Println("Não foi possível baixar o repositório de palavras")
-			return
-		}
-
-		file, err := os.Create(fileName)
+		fiveLettersFile, err := os.Create(fiveLetters)
 
 		if err != nil {
-			fmt.Println("Não foi possível salvar o arquivo base-words.txt")
-			return
+			fmt.Println("Não foi possível tratar o arquivo")
 		}
 
-		defer file.Close()
+		defer fiveLettersFile.Close()
+		writer := bufio.NewWriter(fiveLettersFile)
 
-		_, err = io.Copy(file, resp.Body)
+		scanner := bufio.NewScanner(file)
 
-		if err != nil {
-			fmt.Println("Não foi possível salvar o arquivo base-words.txt")
-			return
+		for scanner.Scan() {
+			word := scanner.Text()
+
+			fmt.Println("word: ", word)
+
+			if len(word) == 5 {
+				fmt.Println("letters: ", 5)
+				_, _ = writer.WriteString(word)
+				_, _ = writer.WriteString("\n")
+			}
+
+			if scanner.Err() != nil {
+				fmt.Println("error: ", scanner.Err())
+			}
 		}
 
 		return
 	},
+}
+
+func downloadFile(url string, filepath string) error {
+	resp, err := http.Get(url)
+
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return errors.New("unable to download file")
+	}
+
+	defer resp.Body.Close()
+
+	file, err := os.Create(filepath)
+
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	_, err = io.Copy(file, resp.Body)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func init() {
